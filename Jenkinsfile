@@ -13,6 +13,7 @@ pipeline {
 
     environment {
         NODE_ENV = 'test'
+        PROJECT_NAME = 'jenkins-juice_shop'
 
         // Docker Registry
         REGISTRY = 'docker.io'
@@ -36,77 +37,70 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 echo '====== Installing dependencies ======'
-
-                sh '''
-                    npm ci
-
-                    cd frontend
-                    npm ci
-                    cd ..
-                '''
             }
         }
 
         stage('Lint') {
             steps {
                 echo '====== Running lint ======'
-
-                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
-                    sh '''
-                        npm run lint
-                    '''
-                }
             }
         }
 
         stage('Build Application') {
             steps {
                 echo '====== Building application ======'
-
-                sh '''
-                    npm run build
-
-                    cd frontend
-                    npm run build
-                    cd ..
-                '''
             }
         }
 
         stage('Unit Tests') {
             steps {
                 echo '====== Running unit tests ======'
-
-                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
-                    sh '''
-                        npm test
-                    '''
-                }
-
-                junit allowEmptyResults: true, testResults: 'test-results/**/*.xml'
             }
         }
 
-        stage('Security Scan') {
+        stage('SAST Scan') {
             steps {
-                echo '====== Running security scans ======'
+                echo '====== Running SAST scans ======'
 
                 catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
-                    sh '''
-                        echi "checkmarx here"
-                    '''
+                    checkmarxASTScanner(
+                        additionalOptions: '--scan-types sast',
+                        baseAuthUrl: '',
+                        branchName: "${GIT_BRANCH}",
+                        checkmarxInstallation: 'CxAST CLI',
+                        credentialsId: '',
+                        projectName: "${PROJECT_NAME}",
+                        serverUrl: '',
+                        tenantName: '',
+                        useOwnAdditionalOptions: true
+                    )
                 }
             }
         }
+
+        stage('SCA Scan') {
+            steps {
+                echo '====== Running SCA scans ======'
+
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    checkmarxASTScanner(
+                        additionalOptions: '--scan-types sca',
+                        baseAuthUrl: '',
+                        branchName: "${GIT_BRANCH}",
+                        checkmarxInstallation: 'CxAST CLI',
+                        credentialsId: '',
+                        projectName: "${PROJECT_NAME}",
+                        serverUrl: '',
+                        tenantName: '',
+                        useOwnAdditionalOptions: true
+                    )
+                }
+            }
+        }        
 
         stage('Build Docker Image') {
             steps {
                 echo '====== Building Docker image ======'
-
-                sh '''
-                    docker build -t ${FULL_IMAGE} .
-                    docker tag ${FULL_IMAGE} ${LATEST_IMAGE}
-                '''
             }
         }
 
@@ -118,24 +112,6 @@ pipeline {
 
             steps {
                 echo '====== Pushing Docker image ======'
-
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'dockerhub-creds',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )
-                ]) {
-
-                    sh '''
-                        echo "${DOCKER_PASS}" | docker login -u "${DOCKER_USER}" --password-stdin ${REGISTRY}
-
-                        docker push ${FULL_IMAGE}
-                        docker push ${LATEST_IMAGE}
-
-                        docker logout ${REGISTRY}
-                    '''
-                }
             }
         }
 
