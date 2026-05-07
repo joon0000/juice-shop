@@ -104,6 +104,27 @@ pipeline {
             }
         }
 
+        stage('Prepare OCI Image') {
+            steps {
+                echo '====== Pulling public image with Skopeo ======'
+
+                sh '''
+                    set -e
+
+                    rm -rf oci-images
+                    mkdir -p oci-images
+
+                    skopeo copy \
+                    --override-os linux \
+                    --override-arch amd64 \
+                    docker://docker.io/bkimminich/juice-shop:latest \
+                    oci:oci-images/juice-shop:latest
+
+                    cat oci-images/juice-shop/index.json | python3 -m json.tool
+                '''
+            }
+        }        
+
         stage('Push Docker Image') {
 
             when {
@@ -114,6 +135,26 @@ pipeline {
                 echo '====== Pushing Docker image ======'
             }
         }
+
+        stage('Container Scan') {
+            steps {
+                echo '====== Running Container scans ======'
+
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    checkmarxASTScanner(
+                        additionalOptions: '--scan-types container-security --container-images "oci-dir:oci-images/juice-shop" --containers-local-resolution',
+                        baseAuthUrl: '',
+                        branchName: "${GIT_BRANCH}",
+                        checkmarxInstallation: 'CxAST CLI',
+                        credentialsId: '',
+                        projectName: "${PROJECT_NAME}",
+                        serverUrl: '',
+                        tenantName: '',
+                        useOwnAdditionalOptions: true
+                    )
+                }
+            }
+        }    
 
     }
 
