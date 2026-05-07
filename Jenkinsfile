@@ -120,19 +120,8 @@ pipeline {
                     docker://docker.io/bkimminich/juice-shop:latest \
                     oci:oci-images/juice-shop:latest
 
-                    cat oci-images/juice-shop/index.json | python3 -m json.tool
+                    cat oci-images/juice-shop/index.json
                 '''
-            }
-        }        
-
-        stage('Push Docker Image') {
-
-            when {
-                branch 'main'
-            }
-
-            steps {
-                echo '====== Pushing Docker image ======'
             }
         }
 
@@ -153,6 +142,17 @@ pipeline {
                         useOwnAdditionalOptions: true
                     )
                 }
+            }
+        }        
+
+        stage('Push Docker Image') {
+
+            when {
+                branch 'master'
+            }
+
+            steps {
+                echo '====== Pushing Docker image ======'
             }
         }    
 
