@@ -163,10 +163,7 @@ pipeline {
             echo '====== Cleanup workspace ======'
 
             cleanWs()
-
-            sh '''
-                docker image prune -f || true
-            '''
+            
         }
 
         success {
