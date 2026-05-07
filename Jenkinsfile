@@ -120,7 +120,7 @@ pipeline {
                     docker://docker.io/bkimminich/juice-shop:latest \
                     oci:oci-images/juice-shop:latest
 
-                    cat oci-images/juice-shop/index.json
+                    cat oci-images/juice-shop/index.json | python3 -m json.tool
                 '''
             }
         }
