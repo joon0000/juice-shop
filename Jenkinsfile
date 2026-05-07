@@ -113,12 +113,10 @@ pipeline {
 
                     rm -rf oci-images
                     mkdir -p oci-images
-
-                    skopeo copy \
-                    --override-os linux \
-                    --override-arch amd64 \
-                    docker://docker.io/bkimminich/juice-shop:latest \
-                    oci:oci-images/juice-shop:latest
+                    
+                    skopeo copy --override-os linux --override-arch amd64 \
+                      docker://docker.io/bkimminich/juice-shop:latest \
+                      oci:oci-images/juice-shop:latest
 
                     cat oci-images/juice-shop/index.json | python3 -m json.tool
                 '''
@@ -131,7 +129,7 @@ pipeline {
 
                 catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
                     checkmarxASTScanner(
-                        additionalOptions: '--scan-types container-security --container-images "oci-dir:oci-images/juice-shop" --containers-local-resolution',
+                        additionalOptions: '--scan-types container-security --container-images "oci-dir:/var/lib/jenkins/workspace/container/oci-images/juice-shop" --containers-local-resolution',
                         baseAuthUrl: '',
                         branchName: "${GIT_BRANCH}",
                         checkmarxInstallation: 'CxAST CLI',
